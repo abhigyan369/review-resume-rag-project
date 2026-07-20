@@ -1,29 +1,24 @@
 import os
-from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+from langchain_groq import ChatGroq
 from langchain.chains import RetrievalQA
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 
 def get_rag_chain(vector_store):
     """
-    Creates a RetrievalQA chain using the provided vector store and HuggingFace LLM.
+    Creates a RetrievalQA chain using the provided vector store and Groq LLM.
     """
     
     # 1. LLM Setup
-    # Ensure HUGGINGFACEHUB_API_TOKEN is set in environment
-    repo_id = "meta-llama/Llama-3.1-8B-Instruct"
-    
-    # Initialize Endpoint with explicit task="text-generation" might fail if API rejects it.
-    # However, ChatHuggingFace needs an LLM. 
-    # Attempting to use the endpoint as is. If 'task' defaults to text-generation, we might need to handle it.
-    llm = HuggingFaceEndpoint(
-        repo_id=repo_id,
-        task="text-generation", # We'll try text-generation first, as ChatHuggingFace often expects a base generator
-        temperature=0.1,
-        huggingfacehub_api_token=os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-    )
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+    if not groq_api_key:
+        raise ValueError("GROQ_API_KEY environment variable is missing or empty. Please set it in your .env file.")
 
-    # Wrap in ChatHuggingFace to handle Intruct/Chat models properly
-    chat_model = ChatHuggingFace(llm=llm)
+    # Initialize Groq LLM
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        temperature=0.1,
+        groq_api_key=groq_api_key
+    )
 
     # 2. Prompt Template (Chat Format)
     system_template = """You are a helpful assistant for analyzing resumes. Use the following pieces of context to answer the question at the end.
@@ -44,7 +39,7 @@ def get_rag_chain(vector_store):
 
     # 3. Retrieval Chain
     qa_chain = RetrievalQA.from_chain_type(
-        llm=chat_model,
+        llm=llm,
         chain_type="stuff",
         retriever=vector_store.as_retriever(search_kwargs={"k": 5}),
         chain_type_kwargs={"prompt": chat_prompt},
