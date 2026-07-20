@@ -159,12 +159,25 @@ with st.sidebar:
     st.markdown("---")
     
     # 1. API Key Section
+
     groq_api_key = os.getenv("GROQ_API_KEY")
     with st.expander("🔑 API Status", expanded=True):
         if groq_api_key and groq_api_key != "your_groq_api_key_here":
             st.success("✓ Groq API Key loaded from `.env`", icon="✅")
         else:
             st.warning("⚠️ `GROQ_API_KEY` missing in `.env` file.", icon="⚠️")
+
+    with st.expander("🔑 Authentication", expanded=True):
+        api_key = st.text_input(
+            "HuggingFace API Key", 
+            type="password", 
+            help="Enter your HF token to enable the LLM.",
+            placeholder="hf_..."
+        )
+        if api_key:
+            os.environ["HUGGINGFACEHUB_API_TOKEN"] = api_key
+            st.success("✓ API Key configured", icon="✅")
+
     
     st.markdown("---")
     
@@ -185,8 +198,13 @@ with st.sidebar:
         # Check if it's a new file
         if uploaded_file.name != st.session_state["processed_filename"]:
             if st.button("🚀 Process & Index", use_container_width=True):
+
                 if not groq_api_key or groq_api_key == "your_groq_api_key_here":
                     st.error("⚠️ Please configure your `GROQ_API_KEY` in the `.env` file first.")
+
+                if not api_key:
+                    st.error("⚠️ Please enter an API Key first.")
+
                 else:
                     start_time = datetime.now()
                     with st.status("Analyzing Document...", expanded=True) as status:
